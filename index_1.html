@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Cup 2026 — Bracket Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pitch:    #0a1a0e;
+    --pitch-mid:#0f2614;
+    --pitch-lt: #163320;
+    --stripe:   #122b18;
+    --gold:     #f5c842;
+    --gold-dim: #c9a430;
+    --red:      #e03535;
+    --red-bg:   #2a0d0d;
+    --blue:     #3a7bd5;
+    --blue-bg:  #0a1a30;
+    --orange:   #f07d2a;
+    --orange-bg:#2b1505;
+    --purple:   #9b5fe0;
+    --purple-bg:#1a0d2e;
+    --text:     #e8f0eb;
+    --muted:    #6b8f74;
+    --card-bg:  rgba(255,255,255,0.04);
+    --border:   rgba(255,255,255,0.07);
+    --radius:   10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--pitch);
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 60px,
+        rgba(255,255,255,0.015) 60px,
+        rgba(255,255,255,0.015) 120px
+      );
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%);
+    padding: 28px 24px 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .trophy { font-size: 2rem; display: block; margin-bottom: 4px; }
+
+  header h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(1.8rem, 6vw, 3rem);
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  header p {
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin-top: 6px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ── REFRESH BAR ── */
+  .refresh-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 14px 24px;
+    background: var(--pitch-mid);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  #refresh-btn {
+    background: var(--gold);
+    color: #000;
+    border: none;
+    padding: 8px 22px;
+    border-radius: 100px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  #refresh-btn:hover { background: #ffd94a; transform: scale(1.03); }
+  #refresh-btn:active { transform: scale(0.97); }
+  #refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  #status-msg {
+    font-size: 0.82rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+  #status-msg.error { color: #f08080; }
+  #status-msg.ok    { color: #7ec98a; }
+
+  /* ── LEADERBOARD ── */
+  .section-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 24px 24px 10px;
+  }
+
+  #leaderboard {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 16px;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  .lb-card {
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .lb-card:hover { transform: translateY(-1px); }
+
+  .lb-card[data-player="Vera"]   { border-color: rgba(224, 53, 53, 0.35); background: linear-gradient(135deg, var(--red-bg) 0%, var(--pitch-mid) 100%); }
+  .lb-card[data-player="Ben"]    { border-color: rgba(58, 123, 213, 0.35); background: linear-gradient(135deg, var(--blue-bg) 0%, var(--pitch-mid) 100%); }
+  .lb-card[data-player="Emily"]  { border-color: rgba(240, 125, 42, 0.35); background: linear-gradient(135deg, var(--orange-bg) 0%, var(--pitch-mid) 100%); }
+  .lb-card[data-player="Lara"]   { border-color: rgba(155, 95, 224, 0.35); background: linear-gradient(135deg, var(--purple-bg) 0%, var(--pitch-mid) 100%); }
+
+  .lb-main {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+  }
+
+  .lb-rank {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--muted);
+    width: 32px;
+    text-align: center;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .lb-rank.rank-1 { color: var(--gold); }
+  .lb-rank.rank-2 { color: #c0c0c0; }
+  .lb-rank.rank-3 { color: #cd7f32; }
+
+  .lb-jersey {
+    width: 42px; height: 42px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+  .lb-card[data-player="Vera"]  .lb-jersey { background: var(--red);    }
+  .lb-card[data-player="Ben"]   .lb-jersey { background: var(--blue);   }
+  .lb-card[data-player="Emily"] .lb-jersey { background: var(--orange); }
+  .lb-card[data-player="Lara"]  .lb-jersey { background: var(--purple); }
+
+  .lb-info { flex: 1; min-width: 0; }
+
+  .lb-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .lb-card[data-player="Vera"]  .lb-name { color: var(--red);    }
+  .lb-card[data-player="Ben"]   .lb-name { color: var(--blue);   }
+  .lb-card[data-player="Emily"] .lb-name { color: var(--orange); }
+  .lb-card[data-player="Lara"]  .lb-name { color: var(--purple); }
+
+  .lb-sub {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lb-score {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 900;
+    line-height: 1;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .lb-score-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-align: right;
+    letter-spacing: 0.06em;
+    margin-top: 1px;
+  }
+
+  .lb-toggle {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-align: center;
+    padding: 3px 0 6px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── TEAMS DETAIL ── */
+  .lb-teams {
+    display: none;
+    padding: 0 18px 14px;
+    border-top: 1px solid var(--border);
+  }
+  .lb-teams.open { display: block; }
+
+  .teams-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 6px;
+    padding-top: 12px;
+  }
+
+  .team-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+  .team-chip.eliminated {
+    opacity: 0.38;
+    text-decoration: line-through;
+    text-decoration-color: rgba(255,255,255,0.3);
+  }
+  .team-chip .flag { font-size: 1rem; flex-shrink: 0; }
+  .team-chip .tname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .team-chip .tpts {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--gold);
+    flex-shrink: 0;
+  }
+
+  /* ── NOTES ── */
+  .notes-section {
+    max-width: 860px;
+    margin: 28px auto 0;
+    padding: 0 16px;
+  }
+
+  .note-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+  .note-card span { color: var(--text); }
+
+  /* ── SCORING KEY ── */
+  .key-section {
+    max-width: 860px;
+    margin: 10px auto 0;
+    padding: 0 16px;
+  }
+
+  .key-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 6px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+
+  .key-item {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .key-item strong {
+    display: block;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.72rem;
+    margin-top: 36px;
+    padding: 0 24px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── MOBILE ── */
+  @media (max-width: 480px) {
+    .lb-score { font-size: 1.9rem; }
+    .lb-name  { font-size: 1.2rem; }
+    .teams-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ── SPINNER ── */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinning { display: inline-block; animation: spin 0.8s linear infinite; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="trophy">🏆</span>
+  <h1>World Cup 2026</h1>
+  <p>Bracket Competition Tracker &nbsp;·&nbsp; USA / Canada / Mexico</p>
+</header>
+
+<div class="refresh-bar">
+  <button id="refresh-btn" onclick="refreshScores()">🔄 Refresh Scores</button>
+  <span id="status-msg">Showing cached scores — hit refresh for live data</span>
+</div>
+
+<div class="section-label" style="text-align:center; padding-top:20px;">🏟️ Standings</div>
+<div id="leaderboard"></div>
+
+<div class="notes-section">
+  <div class="note-card">
+    🔄 <span>Trade:</span> Emily gave England to Lara, received USA
+  </div>
+  <div class="note-card">
+    ⏳ <span>Pending:</span> Ecuador, Paraguay, Senegal, DR Congo — best 3rd-place ruling not yet finalised
+  </div>
+</div>
+
+<div class="key-section">
+  <div class="section-label" style="padding-left:0; padding-bottom:8px;">Scoring Key</div>
+  <div class="key-grid">
+    <div class="key-item"><strong>W = 3</strong>Group Win</div>
+    <div class="key-item"><strong>D = 1</strong>Group Draw</div>
+    <div class="key-item"><strong>L = 0</strong>Group Loss</div>
+    <div class="key-item"><strong>+2</strong>Win R32</div>
+    <div class="key-item"><strong>+4</strong>Win R16</div>
+    <div class="key-item"><strong>+8</strong>Win QF</div>
+    <div class="key-item"><strong>+16</strong>Win SF</div>
+    <div class="key-item"><strong>+32</strong>Win Final</div>
+    <div class="key-item"><strong>+64</strong>Champion 🏆</div>
+  </div>
+</div>
+
+<div class="notes-section" style="margin-top:10px;">
+  <div class="note-card" style="font-size:0.75rem; text-align:center;">
+    Knockout bonuses stack: winning to the Final = +2+4+8+16+32 = 62 bonus pts on top of group stage points
+  </div>
+</div>
+
+<footer>
+  <p>Live data via /api/scores &nbsp;·&nbsp; World Cup 2026 &nbsp;·&nbsp; USA / Canada / Mexico</p>
+</footer>
+
+<script>
+// ─────────────────────────────────────────
+// DATA: Players and their teams
+// ─────────────────────────────────────────
+const PLAYERS = [
+  {
+    name: 'Vera',
+    emoji: '⚽',
+    teams: ['Germany','Ivory Coast','Ecuador','Curaçao','Netherlands','Mexico','Paraguay','Senegal','Uruguay','Iran','New Zealand','Colombia','Uzbekistan']
+  },
+  {
+    name: 'Ben',
+    emoji: '🎯',
+    teams: ['France','Norway','Spain','Bosnia & Herzegovina','Egypt','DR Congo','Scotland','Ghana','South Korea','Iraq','Haiti','Qatar']
+  },
+  {
+    name: 'Emily',
+    emoji: '🌟',
+    teams: ['Argentina','Portugal','Morocco','Croatia','South Africa','Japan','Sweden','Cape Verde','Saudi Arabia','Türkiye','Czechia','USA']
+  },
+  {
+    name: 'Lara',
+    emoji: '🔥',
+    teams: ['Brazil','England','Switzerland','Canada','Austria','Australia','Belgium','Algeria','Tunisia','Jordan','Panama']
+  }
+];
+
+const FLAG = {
+  'Germany':'🇩🇪','Ivory Coast':'🇨🇮','Ecuador':'🇪🇨','Curaçao':'🇨🇼','Netherlands':'🇳🇱',
+  'Mexico':'🇲🇽','Paraguay':'🇵🇾','Senegal':'🇸🇳','Uruguay':'🇺🇾','Iran':'🇮🇷',
+  'New Zealand':'🇳🇿','Colombia':'🇨🇴','Uzbekistan':'🇺🇿',
+  'France':'🇫🇷','Norway':'🇳🇴','Spain':'🇪🇸','Bosnia & Herzegovina':'🇧🇦','Egypt':'🇪🇬',
+  'DR Congo':'🇨🇩','Scotland':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','Ghana':'🇬🇭','South Korea':'🇰🇷','Iraq':'🇮🇶',
+  'Haiti':'🇭🇹','Qatar':'🇶🇦',
+  'Argentina':'🇦🇷','Portugal':'🇵🇹','Morocco':'🇲🇦','Croatia':'🇭🇷','South Africa':'🇿🇦',
+  'Japan':'🇯🇵','Sweden':'🇸🇪','Cape Verde':'🇨🇻','Saudi Arabia':'🇸🇦','Türkiye':'🇹🇷',
+  'Czechia':'🇨🇿','USA':'🇺🇸',
+  'Brazil':'🇧🇷','England':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','Switzerland':'🇨🇭','Canada':'🇨🇦','Austria':'🇦🇹',
+  'Australia':'🇦🇺','Belgium':'🇧🇪','Algeria':'🇩🇿','Tunisia':'🇹🇳','Jordan':'🇯🇴','Panama':'🇵🇦'
+};
+
+const KNOCKOUT_BONUS = { r32: 2, r16: 4, qf: 8, sf: 16, final: 32, champion: 64 };
+
+// ─────────────────────────────────────────
+// STATE: Team points (group + knockout)
+// Initialise with best known scores.
+// This object is keyed by team name.
+// Values: { group: N, knockout: N, eliminated: bool }
+// ─────────────────────────────────────────
+let teamState = {};
+
+function initTeamState() {
+  const allTeams = PLAYERS.flatMap(p => p.teams);
+  allTeams.forEach(t => {
+    teamState[t] = { group: 0, knockout: 0, eliminated: false };
+  });
+}
+
+// ─────────────────────────────────────────
+// SCORING: Process API match array
+// ─────────────────────────────────────────
+function processMatches(matches) {
+  // Reset computed values but keep structure
+  initTeamState();
+
+  matches.forEach(m => {
+    if (m.status !== 'completed') return;
+    const t1 = m.team1, t2 = m.team2;
+    const s1 = m.score1, s2 = m.score2;
+
+    if (m.stage === 'group') {
+      if (!teamState[t1]) return;
+      if (!teamState[t2]) return;
+      if (s1 > s2)      { teamState[t1].group += 3; }
+      else if (s1 < s2) { teamState[t2].group += 3; }
+      else              { teamState[t1].group += 1; teamState[t2].group += 1; }
+    } else {
+      // Knockout stages
+      const stage = m.stage.toLowerCase(); // r32, r16, qf, sf, final
+      const winner = s1 > s2 ? t1 : s2 > s1 ? t2 : null;
+      const loser  = s1 > s2 ? t2 : s2 > s1 ? t1 : null;
+
+      if (winner && teamState[winner]) {
+        teamState[winner].knockout += KNOCKOUT_BONUS[stage] || 0;
+        if (stage === 'final') {
+          teamState[winner].knockout += KNOCKOUT_BONUS.champion;
+        }
+      }
+      if (loser && teamState[loser]) {
+        teamState[loser].eliminated = true;
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────
+// CALC: Total points per player
+// ─────────────────────────────────────────
+function calcScores() {
+  return PLAYERS.map(p => {
+    const teamScores = p.teams.map(t => {
+      const s = teamState[t] || { group: 0, knockout: 0, eliminated: false };
+      return {
+        name: t,
+        pts: s.group + s.knockout,
+        eliminated: s.eliminated
+      };
+    }).sort((a, b) => b.pts - a.pts);
+
+    const total = teamScores.reduce((sum, t) => sum + t.pts, 0);
+    const activeCount = teamScores.filter(t => !t.eliminated).length;
+
+    return { ...p, total, teamScores, activeCount };
+  }).sort((a, b) => b.total - a.total);
+}
+
+// ─────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────
+const openCards = new Set();
+
+function render() {
+  const scores = calcScores();
+  const lb = document.getElementById('leaderboard');
+  lb.innerHTML = '';
+
+  scores.forEach((p, idx) => {
+    const rank = idx + 1;
+    const rankClass = rank <= 3 ? `rank-${rank}` : '';
+    const isOpen = openCards.has(p.name);
+
+    const teamsHTML = p.teamScores.map(t => `
+      <div class="team-chip ${t.eliminated ? 'eliminated' : ''}">
+        <span class="flag">${FLAG[t.name] || '🏳️'}</span>
+        <span class="tname">${t.name}</span>
+        <span class="tpts">${t.pts}</span>
+      </div>
+    `).join('');
+
+    const activeLabel = p.activeCount === p.teams.length
+      ? `${p.teams.length} teams`
+      : `${p.activeCount} active · ${p.teams.length - p.activeCount} out`;
+
+    const card = document.createElement('div');
+    card.className = 'lb-card';
+    card.dataset.player = p.name;
+    card.innerHTML = `
+      <div class="lb-main">
+        <div class="lb-rank ${rankClass}">${rank}</div>
+        <div class="lb-jersey">${p.emoji}</div>
+        <div class="lb-info">
+          <div class="lb-name">${p.name}</div>
+          <div class="lb-sub">${activeLabel}</div>
+        </div>
+        <div>
+          <div class="lb-score">${p.total}</div>
+          <div class="lb-score-label">PTS</div>
+        </div>
+      </div>
+      <div class="lb-toggle">${isOpen ? '▲ hide teams' : '▼ show teams'}</div>
+      <div class="lb-teams ${isOpen ? 'open' : ''}">
+        <div class="teams-grid">${teamsHTML}</div>
+      </div>
+    `;
+
+    card.addEventListener('click', () => {
+      if (openCards.has(p.name)) openCards.delete(p.name);
+      else openCards.add(p.name);
+      render();
+    });
+
+    lb.appendChild(card);
+  });
+}
+
+// ─────────────────────────────────────────
+// REFRESH: Fetch live scores from API
+// ─────────────────────────────────────────
+async function refreshScores() {
+  const btn = document.getElementById('refresh-btn');
+  const msg = document.getElementById('status-msg');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinning">🔄</span> Fetching…';
+  msg.className = '';
+  msg.textContent = 'Fetching latest scores…';
+
+  try {
+    const res = await fetch('/api/scores');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    if (data.matches && Array.isArray(data.matches)) {
+      processMatches(data.matches);
+    }
+
+    render();
+
+    const ts = data.lastUpdated ? new Date(data.lastUpdated).toLocaleTimeString() : new Date().toLocaleTimeString();
+    msg.className = 'ok';
+    msg.textContent = `✓ Last updated: ${ts}`;
+  } catch (err) {
+    msg.className = 'error';
+    msg.textContent = "Couldn't fetch scores — try again in a moment";
+    console.error('Score fetch failed:', err);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔄 Refresh Scores';
+  }
+}
+
+// ─────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────
+initTeamState();
+render();
+</script>
+</body>
+</html>
